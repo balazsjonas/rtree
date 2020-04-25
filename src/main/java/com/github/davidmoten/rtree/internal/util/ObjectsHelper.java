@@ -18,12 +18,13 @@ public final class ObjectsHelper {
 
     @SuppressWarnings("unchecked")
     public static <T> Optional<T> asClass(Object object, Class<T> cls) {
-        if (object == null)
+        if (object == null) {
             return Optional.empty();
-        else if (object.getClass() != cls)
+        } else if (object.getClass() != cls) {
             return Optional.empty();
-        else
+        } else {
             return Optional.of((T) object);
+        }
     }
 
 }

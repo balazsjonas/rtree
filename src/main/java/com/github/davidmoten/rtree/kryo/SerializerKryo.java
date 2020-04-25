@@ -128,7 +128,7 @@ public class SerializerKryo<T, S extends Geometry> implements Serializer<T, S> {
         Context<T, S> context = readContext(input);
         boolean hasRoot = input.readBoolean();
         int size = input.readInt();
-        final Optional<Node<T, S>> root;
+        Optional<Node<T, S>> root;
         if (hasRoot) {
             root = Optional.of(SerializerKryo.readNode(input));
         } else {

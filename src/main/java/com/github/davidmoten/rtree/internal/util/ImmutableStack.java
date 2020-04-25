@@ -76,7 +76,7 @@ public final class ImmutableStack<T> implements Iterable<T> {
 
         @Override
         public U next() {
-            U result = this.stack.peek();
+            final U result = this.stack.peek();
             this.stack = this.stack.pop();
             return result;
         }

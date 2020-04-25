@@ -83,8 +83,9 @@ public final class LeafHelper {
             if (subscriber.isUnsubscribed()) {
                 return;
             } else {
-                if (condition.call(entry.geometry()))
+                if (condition.call(entry.geometry())) {
                     subscriber.onNext(entry);
+                }
             }
         }
     }

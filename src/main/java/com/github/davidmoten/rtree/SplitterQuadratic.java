@@ -106,9 +106,8 @@ public final class SplitterQuadratic implements Splitter {
         }
         if (e1.isPresent()) {
             return new Pair<>(e1.get(), e2.get());
-        } else
-        // all items are the same item
-        {
+        } else {
+            // all items are the same item
             return new Pair<>(items.get(0), items.get(1));
         }
     }

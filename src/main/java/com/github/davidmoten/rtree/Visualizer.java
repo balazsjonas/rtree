@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 
 import com.github.davidmoten.rtree.geometry.Geometry;
 import com.github.davidmoten.rtree.geometry.Rectangle;
@@ -64,13 +65,7 @@ public final class Visualizer {
     private <T, S extends Geometry> List<RectangleDepth> getNodeDepthsSortedByDepth(
             Node<T, S> root) {
         final List<RectangleDepth> list = getRectangleDepths(root, 0);
-        Collections.sort(list, new Comparator<RectangleDepth>() {
-
-            @Override
-            public int compare(RectangleDepth n1, RectangleDepth n2) {
-                return ((Integer) n1.getDepth()).compareTo(n2.getDepth());
-            }
-        });
+        list.sort(Comparator.comparing(RectangleDepth::getDepth));
         return list;
     }
 
