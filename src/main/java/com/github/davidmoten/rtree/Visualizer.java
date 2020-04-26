@@ -11,7 +11,6 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
-import com.github.davidmoten.guavamini.Optional;
 import com.github.davidmoten.rtree.geometry.Geometry;
 import com.github.davidmoten.rtree.geometry.Rectangle;
 
@@ -33,17 +32,19 @@ public final class Visualizer {
 
     private static <R, S extends Geometry> int calculateMaxDepth(
             Optional<? extends Node<R, S>> root) {
-        if (!root.isPresent())
+        if (!root.isPresent()) {
             return 0;
-        else
+        } else {
             return calculateDepth(root.get(), 0);
+        }
     }
 
     private static <R, S extends Geometry> int calculateDepth(Node<R, S> node, int depth) {
-        if (node instanceof Leaf)
+        if (node instanceof Leaf) {
             return depth + 1;
-        else
+        } else {
             return calculateDepth(((NonLeaf<R, S>) node).child(0), depth + 1);
+        }
     }
 
     public BufferedImage createImage() {

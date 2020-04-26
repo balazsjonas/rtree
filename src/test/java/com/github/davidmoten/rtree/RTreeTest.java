@@ -30,7 +30,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.Test;
 
 import com.github.davidmoten.guavamini.Lists;
-import com.github.davidmoten.guavamini.Optional;
 import com.github.davidmoten.guavamini.Sets;
 import com.github.davidmoten.rtree.fbs.FactoryFlatBuffers;
 import com.github.davidmoten.rtree.geometry.Circle;

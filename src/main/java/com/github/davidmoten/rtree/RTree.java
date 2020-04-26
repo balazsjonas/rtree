@@ -37,6 +37,7 @@ import rx.functions.Func2;
  */
 public final class RTree<T, S extends Geometry> {
 
+    public static final Rectangle ZERO_RECTANGLE = rectangle(0, 0, 0, 0);
     private final Optional<? extends Node<T, S>> root;
     private final Context<T, S> context;
 
@@ -56,6 +57,10 @@ public final class RTree<T, S extends Geometry> {
      * Current size in Entries of the RTree.
      */
     private final int size;
+    private final Func2<Optional<Rectangle>, Entry<T, S>, Optional<Rectangle>> rectangleAccumulator =
+            (rectangle, entry) ->
+                    rectangle.map(value -> Optional.of(value.add(entry.geometry().mbr())))
+                            .orElseGet(() -> Optional.of(entry.geometry().mbr()));
 
     /**
      * Constructor.
@@ -72,7 +77,7 @@ public final class RTree<T, S extends Geometry> {
     }
 
     private RTree() {
-        this(Optional.<Node<T, S>>absent(), 0, null);
+        this(Optional.empty(), 0, null);
     }
 
     /**
@@ -135,17 +140,15 @@ public final class RTree<T, S extends Geometry> {
     }
 
     private static <T, S extends Geometry> int calculateDepth(Optional<? extends Node<T, S>> root) {
-        if (!root.isPresent())
-            return 0;
-        else
-            return calculateDepth(root.get(), 0);
+        return root.map(tsNode -> calculateDepth(tsNode, 0)).orElse(0);
     }
 
     private static <T, S extends Geometry> int calculateDepth(Node<T, S> node, int depth) {
-        if (node instanceof Leaf)
+        if (node instanceof Leaf) {
             return depth + 1;
-        else
+        } else {
             return calculateDepth(((NonLeaf<T, S>) node).child(0), depth + 1);
+        }
     }
 
     /**
@@ -217,8 +220,8 @@ public final class RTree<T, S extends Geometry> {
          */
         private static final double DEFAULT_FILLING_FACTOR = 0.4;
         private static final double DEFAULT_LOADING_FACTOR = 0.7;
-        private Optional<Integer> maxChildren = absent();
-        private Optional<Integer> minChildren = absent();
+        private Optional<Integer> maxChildren = Optional.empty();
+        private Optional<Integer> minChildren = Optional.empty();
         private Splitter splitter = new SplitterQuadratic();
         private Selector selector = new SelectorMinimalAreaIncrease();
         private double loadingFactor;
@@ -355,13 +358,16 @@ public final class RTree<T, S extends Geometry> {
         }
 
         private void setDefaultCapacity() {
-            if (!maxChildren.isPresent())
-                if (star)
-                    maxChildren = of(MAX_CHILDREN_DEFAULT_STAR);
-                else
-                    maxChildren = of(MAX_CHILDREN_DEFAULT_GUTTMAN);
-            if (!minChildren.isPresent())
-                minChildren = of((int) Math.round(maxChildren.get() * DEFAULT_FILLING_FACTOR));
+            if (!maxChildren.isPresent()) {
+                if (star) {
+                    maxChildren = Optional.of(MAX_CHILDREN_DEFAULT_STAR);
+                } else {
+                    maxChildren = Optional.of(MAX_CHILDREN_DEFAULT_GUTTMAN);
+                }
+            }
+            if (!minChildren.isPresent()) {
+                minChildren = Optional.of((int) Math.round(maxChildren.get() * DEFAULT_FILLING_FACTOR));
+            }
         }
 
         @SuppressWarnings("unchecked")
@@ -655,10 +661,9 @@ public final class RTree<T, S extends Geometry> {
      */
     @VisibleForTesting
     Observable<Entry<T, S>> search(Func1<? super Geometry, Boolean> condition) {
-        if (root.isPresent())
-            return Observable.unsafeCreate(new OnSubscribeSearch<T, S>(root.get(), condition));
-        else
-            return Observable.empty();
+        return root
+                .map(tsNode -> Observable.unsafeCreate(new OnSubscribeSearch<>(tsNode, condition)))
+                .orElseGet(Observable::empty);
     }
 
     /**
@@ -682,12 +687,7 @@ public final class RTree<T, S extends Geometry> {
      * Returns the always true predicate. See {@link RTree#entries()} for example
      * use.
      */
-    private static final Func1<Geometry, Boolean> ALWAYS_TRUE = new Func1<Geometry, Boolean>() {
-        @Override
-        public Boolean call(Geometry rectangle) {
-            return true;
-        }
-    };
+    private static final Func1<Geometry, Boolean> ALWAYS_TRUE = rectangle -> true;
 
     /**
      * Returns an {@link Observable} sequence of all {@link Entry}s in the R-tree
@@ -733,12 +733,7 @@ public final class RTree<T, S extends Geometry> {
      * @return the sequence of matching entries
      */
     public Observable<Entry<T, S>> search(final Rectangle r, final double maxDistance) {
-        return search(new Func1<Geometry, Boolean>() {
-            @Override
-            public Boolean call(Geometry g) {
-                return g.distance(r) < maxDistance;
-            }
-        });
+        return search(g -> g.distance(r) < maxDistance);
     }
 
     /**
@@ -891,17 +886,10 @@ public final class RTree<T, S extends Geometry> {
     }
 
     private Rectangle calculateMaxView(RTree<T, S> tree) {
-        return tree.entries().reduce(Optional.<Rectangle>absent(),
-                new Func2<Optional<Rectangle>, Entry<T, S>, Optional<Rectangle>>() {
-
-                    @Override
-                    public Optional<Rectangle> call(Optional<Rectangle> r, Entry<T, S> entry) {
-                        if (r.isPresent())
-                            return of(r.get().add(entry.geometry().mbr()));
-                        else
-                            return of(entry.geometry().mbr());
-                    }
-                }).toBlocking().single().or(rectangle(0, 0, 0, 0));
+        return tree.entries()
+                .reduce(Optional.empty(), rectangleAccumulator)
+                .toBlocking().single()
+                .orElse(ZERO_RECTANGLE);
     }
 
     public Optional<? extends Node<T, S>> root() {
@@ -915,10 +903,7 @@ public final class RTree<T, S extends Geometry> {
      * @return minimum bounding rectangle of all entries in RTree
      */
     public Optional<Rectangle> mbr() {
-        if (!root.isPresent())
-            return absent();
-        else
-            return of(root.get().geometry().mbr());
+        return root.map(r -> r.geometry().mbr());
     }
 
     /**
@@ -972,7 +957,7 @@ public final class RTree<T, S extends Geometry> {
             return asString(root.get(), "");
     }
 
-    private final static String marginIncrement = "  ";
+    private static final String MARGIN_INCREMENT = "  ";
 
     private String asString(Node<T, S> node, String margin) {
         StringBuilder s = new StringBuilder();
@@ -984,14 +969,14 @@ public final class RTree<T, S extends Geometry> {
             NonLeaf<T, S> n = (NonLeaf<T, S>) node;
             for (int i = 0; i < n.count(); i++) {
                 Node<T, S> child = n.child(i);
-                s.append(asString(child, margin + marginIncrement));
+                s.append(asString(child, margin + MARGIN_INCREMENT));
             }
         } else {
             Leaf<T, S> leaf = (Leaf<T, S>) node;
 
             for (Entry<T, S> entry : leaf.entries()) {
                 s.append(margin);
-                s.append(marginIncrement);
+                s.append(MARGIN_INCREMENT);
                 s.append("entry=");
                 s.append(entry);
                 s.append('\n');
